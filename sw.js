@@ -1,5 +1,5 @@
 // オフラインでも開けるようにページ本体をキャッシュする
-const CACHE = "vi-drill-v1";
+const CACHE = "vi-drill-v3";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", e => {

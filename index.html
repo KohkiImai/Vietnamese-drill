@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
 <style>
-/* Layout: one centered column, control bar, quiz card (VI prompt + two JA choices) or list view */
+/* Layout: one centered column, set picker + mode bar, quiz card (VI prompt + two JA choices), list or vocab view */
 :root {
   --bg: #f5f7f4;
   --surface: #ffffff;
@@ -62,14 +62,16 @@ h1 { font-size: 1.6rem; margin: 0 0 4px; text-wrap: balance; }
 .seg button { font: inherit; font-size: .9rem; border: 0; background: transparent; color: var(--fg); padding: 7px 14px; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
 .seg button:hover:not([aria-pressed="true"]) { background: var(--accent-soft); }
-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.select-wrap { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); }
+select { font: inherit; font-size: .95rem; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; max-width: 100%; }
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; gap: 18px; }
 .meta { display: flex; justify-content: space-between; color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
 .progress { height: 6px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; }
 .progress > i { display: block; height: 100%; background: var(--accent); width: 0; }
 .prompt-label { color: var(--muted); font-size: .8rem; letter-spacing: .04em; margin: 0; }
-.prompt { font-family: var(--font-vi); font-size: clamp(1.7rem, 6vw, 2.3rem); font-weight: 700; margin: 0; text-wrap: balance; }
+.prompt { font-family: var(--font-vi); font-size: clamp(1.5rem, 5.5vw, 2.1rem); font-weight: 700; margin: 0; text-wrap: balance; }
 .choices { display: grid; gap: 10px; }
 .choice {
   font: inherit; font-size: 1.05rem; text-align: left; color: var(--fg);
@@ -94,13 +96,35 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .score small { font-size: 1rem; color: var(--muted); font-weight: 400; }
 .misses { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
 .misses li { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.misses .vi, .list .vi { font-family: var(--font-vi); font-weight: 600; }
+.vi { font-family: var(--font-vi); font-weight: 600; }
 
-ol.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-.list li { display: grid; grid-template-columns: 2rem minmax(0,1fr) minmax(0,1fr); gap: 12px; padding: 11px 16px; border-top: 1px solid var(--line); }
+.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.list li { display: grid; grid-template-columns: 2.4rem minmax(0,1fr) minmax(0,1fr) auto; gap: 12px; align-items: center; padding: 9px 12px 9px 16px; border-top: 1px solid var(--line); }
 .list li:first-child { border-top: 0; }
 .list .num { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
-.list .vi { font-size: 1.1rem; }
+.list .vi { font-size: 1.05rem; }
+.group-title { font-size: .95rem; margin: 20px 0 8px; }
+.group-title:first-child { margin-top: 0; }
+.vocab li { grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; }
+
+.prompt-row { display: flex; align-items: center; gap: 12px; }
+.prompt-row .prompt { flex: 1; min-width: 0; }
+.speak {
+  flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--line); background: var(--surface); color: var(--accent); cursor: pointer; padding: 0;
+}
+.speak:hover { background: var(--accent-soft); border-color: var(--accent); }
+.speak.sm { width: 2.1rem; height: 2.1rem; }
+.speak.sm svg { width: 16px; height: 16px; }
+.misses .speak.sm { display: inline-grid; vertical-align: middle; margin-left: 4px; }
+.toggle {
+  font: inherit; font-size: .9rem; display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+  border-radius: 999px; padding: 7px 14px; cursor: pointer;
+}
+.toggle svg { width: 16px; height: 16px; }
+.toggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.voice-warn { font-size: .85rem; color: var(--bad); background: var(--bad-soft); border-radius: 10px; padding: 10px 12px; margin: -6px 0 18px; }
 
 .notes { margin-top: 24px; font-size: .9rem; color: var(--muted); }
 .notes h2 { font-size: .95rem; color: var(--fg); margin: 0 0 6px; }
@@ -108,8 +132,11 @@ ol.list { list-style: none; margin: 0; padding: 0; background: var(--surface); b
 .notes b { font-family: var(--font-vi); color: var(--fg); }
 
 @media (max-width: 480px) {
-  .list li { grid-template-columns: 1.6rem minmax(0,1fr); }
-  .list li .ja { grid-column: 2; }
+  .list li { grid-template-columns: 2rem minmax(0,1fr) auto; row-gap: 2px; }
+  .list li .ja { grid-column: 2; grid-row: 2; }
+  .list li .speak { grid-column: 3; grid-row: 1 / span 2; }
+  .vocab li { grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; }
+  .vocab li .ja, .vocab li .speak { grid-column: auto; grid-row: auto; }
   .misses li { grid-template-columns: minmax(0,1fr); gap: 2px; }
   .card { padding: 18px; }
 }
@@ -123,6 +150,7 @@ ol.list { list-style: none; margin: 0; padding: 0; background: var(--surface); b
 html, body { margin: 0; }
 body { -webkit-text-size-adjust: 100%; }
 button { -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
 </style>
 
 </head>
@@ -130,92 +158,253 @@ button { -webkit-tap-highlight-color: transparent; }
 
 <div class="wrap">
   <h1>ベトナム語ドリル</h1>
-  <p class="sub">ベトナム語の文を見て、正しい日本語を2つの中から選びましょう。</p>
+  <p class="sub">同じ単語を組み合わせた100問。ベトナム語の文を見て（聞いて）、正しい日本語を2つから選びましょう。</p>
 
   <div class="bar">
-    <div class="seg" role="group" aria-label="レベル">
-      <button id="lv2" data-level="2" aria-pressed="true">2語文</button>
-      <button id="lv3" data-level="3" aria-pressed="false">3語文</button>
-    </div>
+    <label class="select-wrap" for="setSel">問題
+      <select id="setSel"></select>
+    </label>
     <div class="seg" role="group" aria-label="表示">
       <button id="mQuiz" data-mode="quiz" aria-pressed="true">クイズ</button>
       <button id="mList" data-mode="list" aria-pressed="false">一覧</button>
+      <button id="mVocab" data-mode="vocab" aria-pressed="false">単語</button>
     </div>
   </div>
+
+  <div class="bar" id="audioBar">
+    <button class="toggle" id="autoBtn" aria-pressed="true"><span id="autoIcon"></span>自動で読み上げ</button>
+    <div class="seg" role="group" aria-label="読み上げの速さ">
+      <button id="rNormal" data-rate="normal" aria-pressed="true">ふつう</button>
+      <button id="rSlow" data-rate="slow" aria-pressed="false">ゆっくり</button>
+    </div>
+  </div>
+  <p class="voice-warn" id="voiceWarn" hidden></p>
 
   <div id="view"></div>
   <div class="notes" id="notes"></div>
 </div>
 
 <script>
-const DATA = {
-  2: [
-    ["Tôi ăn.", "私は食べる。"], ["Tôi đi.", "私は行く。"], ["Tôi đói.", "私はお腹が空いた。"],
-    ["Tôi mệt.", "私は疲れた。"], ["Tôi hiểu.", "私はわかる。"], ["Tôi biết.", "私は知っている。"],
-    ["Bạn đẹp.", "あなたはきれいだ。"], ["Mẹ nấu.", "母が料理する。"], ["Bố đọc.", "父が読む。"],
-    ["Em khóc.", "妹（弟）が泣く。"], ["Anh cười.", "兄が笑う。"], ["Trời mưa.", "雨が降る。"],
-    ["Trời nóng.", "暑い。"], ["Trời lạnh.", "寒い。"], ["Gió thổi.", "風が吹く。"],
-    ["Hoa nở.", "花が咲く。"], ["Chó sủa.", "犬が吠える。"], ["Mèo ngủ.", "猫が寝る。"],
-    ["Xe chạy.", "車が走る。"], ["Phở ngon.", "フォーがおいしい。"]
-  ],
-  3: [
-    ["Tôi ăn cơm.", "私はご飯を食べる。"], ["Tôi uống nước.", "私は水を飲む。"],
-    ["Tôi thích phở.", "私はフォーが好きだ。"], ["Tôi yêu bạn.", "私はあなたを愛している。"],
-    ["Mẹ nấu cơm.", "母がご飯を作る。"], ["Bố đọc báo.", "父が新聞を読む。"],
-    ["Chị mua rau.", "姉が野菜を買う。"], ["Mèo ăn cá.", "猫が魚を食べる。"],
-    ["Em đi học.", "妹（弟）が学校へ行く。"], ["Anh đi làm.", "兄が仕事へ行く。"],
-    ["Chó chạy nhanh.", "犬が速く走る。"], ["Tôi rất mệt.", "私はとても疲れた。"],
-    ["Trời rất nóng.", "とても暑い。"], ["Phở rất ngon.", "フォーはとてもおいしい。"],
-    ["Hôm nay mưa.", "今日は雨だ。"], ["Tôi không biết.", "私は知らない。"],
-    ["Tôi không hiểu.", "私はわからない。"], ["Tôi không đói.", "私はお腹が空いていない。"],
-    ["Bạn đi đâu?", "あなたはどこへ行くの？"], ["Đây là gì?", "これは何？"]
-  ]
-};
-const NOTES = {
-  2: `<h2>ポイント</h2><ul>
-    <li>活用がなく、「主語＋動詞」や「主語＋形容詞」を並べるだけで文になります（<b>Tôi mệt</b>＝私・疲れた）。</li>
-    <li><b>Trời</b> は「空・天」。天気の文の主語によく使います。</li>
-    <li>相手との関係で <b>Em / Anh / Chị</b> などの人称を使い分けます。</li></ul>`,
-  3: `<h2>ポイント</h2><ul>
-    <li>語順は「主語＋動詞＋目的語」（<b>Tôi ăn cơm</b>＝私・食べる・ご飯）。</li>
-    <li><b>rất</b>（とても）は形容詞の前に置きます。</li>
-    <li><b>không</b> を動詞・形容詞の前に置くと否定になります。</li>
-    <li>疑問詞 <b>đâu</b>（どこ）、<b>gì</b>（何）は文末に置きます。</li></ul>`
-};
+const SETS = [
+  { name: "1. 行く・帰る", note: `<li><b>đi đến</b> ＋場所＝「〜に行く」。<b>về nhà</b>＝「家に帰る」。</li>
+      <li><b>từ</b> ＋場所＋ <b>về</b>＝「〜から帰る」。</li>
+      <li><b>hôm nay</b>（今日）や <b>ngày mai</b>（明日）は文の頭に置きます。</li>`, items: [
+    ["Tôi đi đến nhà ga.", "私は駅に行く。"],
+    ["Tôi đi đến trường.", "私は学校に行く。"],
+    ["Anh ấy đi đến nhà ga.", "彼は駅に行く。"],
+    ["Anh ấy đi đến công ty.", "彼は会社に行く。"],
+    ["Chị ấy đi đến bệnh viện.", "彼女は病院に行く。"],
+    ["Em gái tôi đi đến trường.", "妹は学校に行く。"],
+    ["Mẹ đi đến chợ.", "母は市場に行く。"],
+    ["Bố đi đến công ty.", "父は会社に行く。"],
+    ["Bạn tôi đi đến siêu thị.", "友達はスーパーに行く。"],
+    ["Tôi về nhà.", "私は家に帰る。"],
+    ["Anh ấy về nhà.", "彼は家に帰る。"],
+    ["Em gái tôi từ trường về.", "妹は学校から帰る。"],
+    ["Bố từ công ty về.", "父は会社から帰る。"],
+    ["Mẹ từ chợ về.", "母は市場から帰る。"],
+    ["Chị ấy từ bệnh viện về.", "彼女は病院から帰る。"],
+    ["Tôi từ nhà ga về nhà.", "私は駅から家に帰る。"],
+    ["Hôm nay tôi đi đến công ty.", "今日、私は会社に行く。"],
+    ["Ngày mai anh ấy đi đến bệnh viện.", "明日、彼は病院に行く。"],
+    ["Hôm nay em gái tôi về nhà.", "今日、妹は家に帰る。"],
+    ["Ngày mai mẹ đi đến siêu thị.", "明日、母はスーパーに行く。"]
+  ]},
+  { name: "2. 食べる・飲む", note: `<li><b>ăn</b>＝食べる、<b>uống</b>＝飲む。目的語は動詞のあとに置きます。</li>
+      <li><b>ở</b> ＋場所＝「〜で」。文の最後に置きます（<b>ăn cơm ở nhà</b>＝家でご飯を食べる）。</li>`, items: [
+    ["Tôi ăn cơm.", "私はご飯を食べる。"],
+    ["Tôi ăn phở.", "私はフォーを食べる。"],
+    ["Tôi ăn bánh mì.", "私はバインミーを食べる。"],
+    ["Anh ấy ăn phở.", "彼はフォーを食べる。"],
+    ["Chị ấy ăn bánh mì.", "彼女はバインミーを食べる。"],
+    ["Em gái tôi ăn cơm.", "妹はご飯を食べる。"],
+    ["Bố ăn cơm ở nhà.", "父は家でご飯を食べる。"],
+    ["Mẹ ăn phở ở chợ.", "母は市場でフォーを食べる。"],
+    ["Tôi uống cà phê.", "私はコーヒーを飲む。"],
+    ["Tôi uống nước.", "私は水を飲む。"],
+    ["Tôi uống trà.", "私はお茶を飲む。"],
+    ["Anh ấy uống cà phê.", "彼はコーヒーを飲む。"],
+    ["Bố uống bia.", "父はビールを飲む。"],
+    ["Mẹ uống trà.", "母はお茶を飲む。"],
+    ["Bạn tôi uống bia.", "友達はビールを飲む。"],
+    ["Anh ấy uống cà phê ở công ty.", "彼は会社でコーヒーを飲む。"],
+    ["Em gái tôi ăn bánh mì ở trường.", "妹は学校でバインミーを食べる。"],
+    ["Tôi ăn cơm ở công ty.", "私は会社でご飯を食べる。"],
+    ["Hôm nay tôi ăn phở.", "今日、私はフォーを食べる。"],
+    ["Ngày mai bố uống bia.", "明日、父はビールを飲む。"]
+  ]},
+  { name: "3. 買う・好き・勉強する", note: `<li><b>mua</b>＝買う、<b>thích</b>＝好き、<b>học</b>＝勉強する、<b>đọc</b>＝読む。</li>
+      <li><b>tiếng</b> ＋国名で言語になります（<b>tiếng Việt</b>＝ベトナム語）。</li>`, items: [
+    ["Tôi mua bánh mì.", "私はバインミーを買う。"],
+    ["Mẹ mua rau.", "母は野菜を買う。"],
+    ["Mẹ mua rau ở chợ.", "母は市場で野菜を買う。"],
+    ["Bố mua báo.", "父は新聞を買う。"],
+    ["Chị ấy mua nước ở siêu thị.", "彼女はスーパーで水を買う。"],
+    ["Anh ấy mua sách.", "彼は本を買う。"],
+    ["Em gái tôi mua sách ở nhà ga.", "妹は駅で本を買う。"],
+    ["Tôi thích phở.", "私はフォーが好きだ。"],
+    ["Tôi thích cà phê.", "私はコーヒーが好きだ。"],
+    ["Anh ấy thích bia.", "彼はビールが好きだ。"],
+    ["Em gái tôi thích bánh mì.", "妹はバインミーが好きだ。"],
+    ["Mẹ thích trà.", "母はお茶が好きだ。"],
+    ["Tôi học tiếng Việt.", "私はベトナム語を勉強する。"],
+    ["Anh ấy học tiếng Nhật.", "彼は日本語を勉強する。"],
+    ["Em gái tôi học tiếng Anh.", "妹は英語を勉強する。"],
+    ["Tôi học tiếng Việt ở nhà.", "私は家でベトナム語を勉強する。"],
+    ["Chị ấy học tiếng Nhật ở trường.", "彼女は学校で日本語を勉強する。"],
+    ["Bố đọc báo.", "父は新聞を読む。"],
+    ["Tôi đọc sách ở nhà ga.", "私は駅で本を読む。"],
+    ["Bạn tôi thích tiếng Việt.", "友達はベトナム語が好きだ。"]
+  ]},
+  { name: "4. 否定・質問", note: `<li><b>không</b> を動詞の前に置くと否定になります（<b>không ăn</b>＝食べない）。</li>
+      <li><b>đâu</b>（どこ）、<b>gì</b>（何）は文末に置きます。</li>
+      <li><b>có</b> ＋動詞＋ <b>không?</b>＝「〜しますか？」。</li>`, items: [
+    ["Tôi không đi đến trường.", "私は学校に行かない。"],
+    ["Anh ấy không đi đến công ty.", "彼は会社に行かない。"],
+    ["Hôm nay tôi không về nhà.", "今日、私は家に帰らない。"],
+    ["Tôi không ăn cơm.", "私はご飯を食べない。"],
+    ["Em gái tôi không uống cà phê.", "妹はコーヒーを飲まない。"],
+    ["Bố không uống bia.", "父はビールを飲まない。"],
+    ["Tôi không thích bia.", "私はビールが好きではない。"],
+    ["Chị ấy không thích cà phê.", "彼女はコーヒーが好きではない。"],
+    ["Mẹ không mua rau.", "母は野菜を買わない。"],
+    ["Anh ấy không học tiếng Việt.", "彼はベトナム語を勉強しない。"],
+    ["Bạn đi đâu?", "あなたはどこへ行くの？"],
+    ["Anh ấy đi đâu?", "彼はどこへ行くの？"],
+    ["Mẹ mua gì?", "母は何を買うの？"],
+    ["Bạn ăn gì?", "あなたは何を食べるの？"],
+    ["Bạn uống gì?", "あなたは何を飲むの？"],
+    ["Bạn học gì?", "あなたは何を勉強するの？"],
+    ["Bạn có thích phở không?", "あなたはフォーが好きですか？"],
+    ["Anh ấy có đi đến nhà ga không?", "彼は駅に行きますか？"],
+    ["Bạn có uống cà phê không?", "あなたはコーヒーを飲みますか？"],
+    ["Ngày mai bạn đi đâu?", "明日、あなたはどこへ行くの？"]
+  ]},
+  { name: "5. 様子・もう〜した・〜して", note: `<li><b>rất</b> ＋形容詞＝「とても〜」。形容詞はそのまま述語になります。</li>
+      <li>文末の <b>rồi</b>＝「もう〜した」。</li>
+      <li><b>và</b>＝「そして」。2つの動作をつなぎます。<b>với</b>＝「〜と一緒に」。</li>`, items: [
+    ["Phở rất ngon.", "フォーはとてもおいしい。"],
+    ["Bánh mì rất ngon.", "バインミーはとてもおいしい。"],
+    ["Cà phê này rất ngon.", "このコーヒーはとてもおいしい。"],
+    ["Nhà ga rất xa.", "駅はとても遠い。"],
+    ["Trường rất gần.", "学校はとても近い。"],
+    ["Siêu thị không xa.", "スーパーは遠くない。"],
+    ["Chợ rất đông.", "市場はとても混んでいる。"],
+    ["Tiếng Việt rất khó.", "ベトナム語はとても難しい。"],
+    ["Tiếng Nhật không dễ.", "日本語は簡単ではない。"],
+    ["Hôm nay tôi rất mệt.", "今日、私はとても疲れた。"],
+    ["Em gái tôi rất đói.", "妹はとてもお腹が空いている。"],
+    ["Bố đi đến công ty rồi.", "父はもう会社に行った。"],
+    ["Mẹ từ chợ về rồi.", "母はもう市場から帰った。"],
+    ["Tôi ăn phở rồi.", "私はもうフォーを食べた。"],
+    ["Anh ấy về nhà rồi.", "彼はもう家に帰った。"],
+    ["Tôi đi đến nhà ga và mua bánh mì.", "私は駅に行って、バインミーを買う。"],
+    ["Mẹ đi đến chợ và mua rau.", "母は市場に行って、野菜を買う。"],
+    ["Tôi về nhà và học tiếng Việt.", "私は家に帰って、ベトナム語を勉強する。"],
+    ["Bố về nhà và uống bia.", "父は家に帰って、ビールを飲む。"],
+    ["Ngày mai tôi đi đến trường với em gái.", "明日、私は妹と学校に行く。"]
+  ]}
+];
 
-const S = { level: 2, mode: "quiz", queue: [], pos: 0, score: 0, misses: [], answered: false };
+const VOCAB = [
+  ["人", [["Tôi","私"],["Bạn","あなた"],["Anh ấy","彼"],["Chị ấy","彼女"],["Em gái tôi","妹"],["Bố","父"],["Mẹ","母"],["Bạn tôi","私の友達"]]],
+  ["場所", [["nhà ga","駅"],["trường","学校"],["công ty","会社"],["bệnh viện","病院"],["siêu thị","スーパー"],["chợ","市場"],["nhà","家"]]],
+  ["動作", [["đi đến","〜に行く"],["về","帰る"],["từ 〜 về","〜から帰る"],["ăn","食べる"],["uống","飲む"],["mua","買う"],["thích","好き"],["học","勉強する"],["đọc","読む"]]],
+  ["もの", [["cơm","ご飯"],["phở","フォー"],["bánh mì","バインミー（パン）"],["cà phê","コーヒー"],["nước","水"],["trà","お茶"],["bia","ビール"],["rau","野菜"],["sách","本"],["báo","新聞"],["tiếng Việt","ベトナム語"],["tiếng Nhật","日本語"],["tiếng Anh","英語"]]],
+  ["様子", [["ngon","おいしい"],["xa","遠い"],["gần","近い"],["đông","混んでいる"],["khó","難しい"],["dễ","簡単"],["mệt","疲れた"],["đói","お腹が空いた"]]],
+  ["その他", [["ở","〜で"],["hôm nay","今日"],["ngày mai","明日"],["không","〜ない"],["có 〜 không?","〜しますか？"],["đâu","どこ"],["gì","何"],["rất","とても"],["rồi","もう〜した"],["và","そして"],["với","〜と一緒に"],["này","この"]]]
+];
+
+// Flat list of all 100 items: [vi, ja, setIndex]
+const ALL = SETS.flatMap((s, si) => s.items.map(([vi, ja]) => [vi, ja, si]));
+const RANDOM_N = 20;
+
+const S = { set: 0, mode: "quiz", queue: [], pos: 0, score: 0, misses: [], answered: false };
 try {
-  const s = JSON.parse(localStorage.getItem("vi-drill") || "{}");
-  if (s.level === 2 || s.level === 3) S.level = s.level;
-  if (s.mode === "quiz" || s.mode === "list") S.mode = s.mode;
+  const s = JSON.parse(localStorage.getItem("vi-drill-100") || "{}");
+  if (Number.isInteger(s.set) && s.set >= 0 && s.set <= SETS.length + 1) S.set = s.set;
+  if (["quiz","list","vocab"].includes(s.mode)) S.mode = s.mode;
 } catch (e) {}
-const save = () => { try { localStorage.setItem("vi-drill", JSON.stringify({ level: S.level, mode: S.mode })); } catch (e) {} };
+const save = () => { try { localStorage.setItem("vi-drill-100", JSON.stringify({ set: S.set, mode: S.mode })); } catch (e) {} };
 
 const view = document.getElementById("view");
+const sel = document.getElementById("setSel");
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const esc = t => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const words = t => t.toLowerCase().replace(/[.,?!]/g, "").split(/\s+/);
+
+// Which item indices (into ALL) belong to the current selection
+function poolIndices() {
+  if (S.set < SETS.length) return ALL.map((x, i) => i).filter(i => ALL[i][2] === S.set);
+  return ALL.map((x, i) => i); // ランダム / 全100問
+}
+
+// Pick a distractor that shares many words with the correct sentence, so you must read every word
+function pickDistractor(idx) {
+  const target = words(ALL[idx][0]);
+  const scored = ALL.map((x, i) => {
+    if (i === idx || x[1] === ALL[idx][1]) return null;
+    const w = words(x[0]);
+    const shared = w.filter(t => target.includes(t)).length;
+    const lenDiff = Math.abs(w.length - target.length);
+    return { i, score: shared * 2 - lenDiff };
+  }).filter(Boolean).sort((a, b) => b.score - a.score);
+  const top = scored.slice(0, 4);
+  return top[Math.floor(Math.random() * top.length)].i;
+}
+
+// ---- 読み上げ（端末の音声合成を使う）----
+const SPEAKER = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const A = { auto: true, rate: "normal" };
+try {
+  const a = JSON.parse(localStorage.getItem("vi-drill-audio") || "{}");
+  if (typeof a.auto === "boolean") A.auto = a.auto;
+  if (a.rate === "normal" || a.rate === "slow") A.rate = a.rate;
+} catch (e) {}
+const saveAudio = () => { try { localStorage.setItem("vi-drill-audio", JSON.stringify(A)); } catch (e) {} };
+const canSpeak = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+let viVoice = null;
+let userActed = false; // スマホは最初のタップ前に音を出せないため
+function loadVoices() {
+  if (!canSpeak) return;
+  const vs = speechSynthesis.getVoices();
+  viVoice = vs.find(v => /^vi([-_]|$)/i.test(v.lang)) || null;
+  const warn = document.getElementById("voiceWarn");
+  if (vs.length && !viVoice) {
+    warn.textContent = "この端末にはベトナム語の読み上げ音声が見つかりません。Androidは「設定 → テキスト読み上げ」でGoogleの音声エンジンにベトナム語を追加してください。";
+    warn.hidden = false;
+  } else warn.hidden = true;
+}
+function speak(text) {
+  if (!canSpeak) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/〜/g, " "));
+  u.lang = "vi-VN";
+  if (viVoice) u.voice = viVoice;
+  u.rate = A.rate === "slow" ? 0.6 : 0.9;
+  speechSynthesis.speak(u);
+}
+const sayBtn = (text, cls) => `<button class="speak${cls ? " " + cls : ""}" data-say="${esc(text)}" aria-label="読み上げる">${SPEAKER}</button>`;
 
 function startQuiz(indices) {
-  S.queue = shuffle(indices || DATA[S.level].map((_, i) => i));
-  S.pos = 0; S.score = 0; S.misses = []; S.answered = false;
+  let q = shuffle(indices || poolIndices());
+  if (!indices && S.set === SETS.length) q = q.slice(0, RANDOM_N);
+  S.queue = q; S.pos = 0; S.score = 0; S.misses = []; S.answered = false;
   showQuestion();
 }
 
 function showQuestion() {
-  const items = DATA[S.level];
   const idx = S.queue[S.pos];
-  const [vi, ja] = items[idx];
-  const others = items.map((_, i) => i).filter(i => i !== idx);
-  const wrongIdx = others[Math.floor(Math.random() * others.length)];
-  const opts = shuffle([{ text: ja, ok: true }, { text: items[wrongIdx][1], ok: false }]);
+  const [vi, ja] = ALL[idx];
+  const opts = shuffle([{ text: ja, ok: true }, { text: ALL[pickDistractor(idx)][1], ok: false }]);
   S.answered = false;
   const total = S.queue.length;
   view.innerHTML = `
     <div class="card">
-      <div class="meta"><span>第 ${S.pos + 1} 問 / ${total}</span><span>正解 ${S.score}</span></div>
+      <div class="meta"><span>第 ${S.pos + 1} 問 / ${total}</span><span id="sc">正解 ${S.score}</span></div>
       <div class="progress"><i style="width:${(S.pos / total) * 100}%"></i></div>
       <p class="prompt-label">この文の意味は？</p>
-      <p class="prompt" lang="vi">${esc(vi)}</p>
+      <div class="prompt-row"><p class="prompt" lang="vi">${esc(vi)}</p>${sayBtn(vi)}</div>
       <div class="choices">
         ${opts.map((o, i) => `<button class="choice" id="opt${i}" data-ok="${o.ok}"><span class="key">${i + 1}</span><span>${esc(o.text)}</span></button>`).join("")}
       </div>
@@ -224,6 +413,7 @@ function showQuestion() {
     </div>`;
   view.querySelectorAll(".choice").forEach(btn => btn.addEventListener("click", () => answer(btn)));
   document.getElementById("next").addEventListener("click", next);
+  if (A.auto && userActed) speak(vi);
 }
 
 function answer(btn) {
@@ -239,7 +429,7 @@ function answer(btn) {
   });
   if (ok) { S.score++; fb.textContent = "正解！"; fb.className = "feedback ok"; }
   else { S.misses.push(S.queue[S.pos]); fb.textContent = "不正解。緑色が正しい答えです。"; fb.className = "feedback ng"; }
-  view.querySelector(".meta span:last-child").textContent = `正解 ${S.score}`;
+  document.getElementById("sc").textContent = `正解 ${S.score}`;
   const n = document.getElementById("next");
   n.hidden = false; n.focus();
 }
@@ -250,7 +440,6 @@ function next() {
 }
 
 function showResult() {
-  const items = DATA[S.level];
   const total = S.queue.length;
   const msg = S.score === total ? "全問正解です！" : S.score >= total * 0.8 ? "よくできました。" : "間違えた文を見直してみましょう。";
   view.innerHTML = `
@@ -259,7 +448,7 @@ function showResult() {
       <p class="score">${S.score}<small> / ${total} 問正解</small></p>
       <p style="margin:0">${msg}</p>
       ${S.misses.length ? `<div><p class="prompt-label" style="margin-bottom:6px">間違えた文</p><ul class="misses">
-        ${S.misses.map(i => `<li><span class="vi" lang="vi">${esc(items[i][0])}</span><span>${esc(items[i][1])}</span></li>`).join("")}
+        ${S.misses.map(i => `<li><span class="vi" lang="vi">${esc(ALL[i][0])} ${sayBtn(ALL[i][0], "sm")}</span><span>${esc(ALL[i][1])}</span></li>`).join("")}
       </ul></div>` : ""}
       <div class="actions">
         ${S.misses.length ? `<button class="primary" id="retryMiss">間違えた問題だけもう一度</button>` : ""}
@@ -272,25 +461,70 @@ function showResult() {
 }
 
 function showList() {
-  view.innerHTML = `<ol class="list">${DATA[S.level].map(([vi, ja], i) =>
-    `<li><span class="num">${i + 1}</span><span class="vi" lang="vi">${esc(vi)}</span><span class="ja">${esc(ja)}</span></li>`).join("")}</ol>`;
+  const sets = S.set < SETS.length ? [S.set] : SETS.map((_, i) => i);
+  view.innerHTML = sets.map(si => {
+    const rows = SETS[si].items.map(([vi, ja], i) =>
+      `<li><span class="num">${si * 20 + i + 1}</span><span class="vi" lang="vi">${esc(vi)}</span><span class="ja">${esc(ja)}</span>${sayBtn(vi, "sm")}</li>`).join("");
+    return `${sets.length > 1 ? `<h2 class="group-title">${esc(SETS[si].name)}</h2>` : ""}<ol class="list">${rows}</ol>`;
+  }).join("");
+}
+
+function showVocab() {
+  view.innerHTML = VOCAB.map(([title, list]) =>
+    `<h2 class="group-title">${title}</h2><ul class="list vocab">${list.map(([vi, ja]) =>
+      `<li><span class="vi" lang="vi">${esc(vi)}</span><span class="ja">${esc(ja)}</span>${sayBtn(vi, "sm")}</li>`).join("")}</ul>`).join("");
+}
+
+function renderNotes() {
+  const el = document.getElementById("notes");
+  if (S.mode === "vocab") { el.innerHTML = ""; return; }
+  if (S.set < SETS.length) el.innerHTML = `<h2>ポイント</h2><ul>${SETS[S.set].note}</ul>`;
+  else el.innerHTML = `<h2>ポイント</h2><ul><li>選択肢には、正解とよく似た文（同じ単語を使った文）が出ます。主語・場所・動詞を1語ずつ確かめましょう。</li></ul>`;
 }
 
 function render() {
-  document.querySelectorAll("[data-level]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.level === S.level)));
+  sel.value = String(S.set);
   document.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)));
-  document.getElementById("notes").innerHTML = NOTES[S.level];
-  if (S.mode === "quiz") startQuiz(); else showList();
+  sel.disabled = S.mode === "vocab";
+  renderNotes();
+  if (S.mode === "quiz") startQuiz(); else if (S.mode === "list") showList(); else showVocab();
 }
 
-document.querySelectorAll("[data-level]").forEach(b => b.addEventListener("click", () => { S.level = +b.dataset.level; save(); render(); }));
+sel.innerHTML = SETS.map((s, i) => `<option value="${i}">${esc(s.name)}（20問）</option>`).join("")
+  + `<option value="${SETS.length}">全体からランダム（${RANDOM_N}問）</option>`
+  + `<option value="${SETS.length + 1}">全100問</option>`;
+sel.addEventListener("change", () => { S.set = +sel.value; save(); render(); });
 document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => { S.mode = b.dataset.mode; save(); render(); }));
 document.addEventListener("keydown", e => {
-  if (S.mode !== "quiz") return;
+  if (S.mode !== "quiz" || e.target.tagName === "SELECT") return;
   if ((e.key === "1" || e.key === "2") && !S.answered) {
     const b = document.getElementById("opt" + (+e.key - 1)); if (b) b.click();
+  } else if (e.key === "Enter" && S.answered) {
+    const n = document.getElementById("next"); if (n && document.activeElement !== n) n.click();
   }
 });
+
+// 読み上げの操作
+document.addEventListener("pointerdown", () => { userActed = true; }, { capture: true });
+document.addEventListener("keydown", () => { userActed = true; }, { capture: true });
+view.addEventListener("click", e => { const b = e.target.closest("[data-say]"); if (b) speak(b.dataset.say); });
+const autoBtn = document.getElementById("autoBtn");
+document.getElementById("autoIcon").innerHTML = SPEAKER;
+function renderAudio() {
+  autoBtn.setAttribute("aria-pressed", String(A.auto));
+  document.querySelectorAll("[data-rate]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.rate === A.rate)));
+}
+autoBtn.addEventListener("click", () => { A.auto = !A.auto; saveAudio(); renderAudio(); });
+document.querySelectorAll("[data-rate]").forEach(b => b.addEventListener("click", () => { A.rate = b.dataset.rate; saveAudio(); renderAudio(); }));
+if (canSpeak) {
+  loadVoices();
+  speechSynthesis.addEventListener("voiceschanged", loadVoices);
+} else {
+  document.getElementById("audioBar").hidden = true;
+  const w = document.getElementById("voiceWarn");
+  w.textContent = "このブラウザは読み上げに対応していません。"; w.hidden = false;
+}
+renderAudio();
 
 render();
 </script>
