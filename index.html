@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f7a5a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ベトナム語">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>ベトナム語ドリル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* Layout: one centered column, control bar, quiz card (VI prompt + two JA choices) or list view */
+:root {
+  --bg: #f5f7f4;
+  --surface: #ffffff;
+  --fg: #1d2a24;
+  --muted: #64746c;
+  --line: #dde4df;
+  --accent: #1f7a5a;
+  --accent-soft: #e2f1ea;
+  --on-accent: #ffffff;
+  --good: #1f7a5a;
+  --good-soft: #dff2e8;
+  --bad: #b23a3a;
+  --bad-soft: #f8e3e1;
+  --font-vi: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-ja: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121815; --surface: #19211d; --fg: #e4ece7; --muted: #93a39a;
+    --line: #2b3631; --accent: #5cc49b; --accent-soft: #1f3329; --on-accent: #0f1512;
+    --good: #5cc49b; --good-soft: #1d3428; --bad: #ef8a80; --bad-soft: #3a2220;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121815; --surface: #19211d; --fg: #e4ece7; --muted: #93a39a;
+  --line: #2b3631; --accent: #5cc49b; --accent-soft: #1f3329; --on-accent: #0f1512;
+  --good: #5cc49b; --good-soft: #1d3428; --bad: #ef8a80; --bad-soft: #3a2220;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-ja); line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 640px; margin: 0 auto; padding-block: 28px 48px; }
+h1 { font-size: 1.6rem; margin: 0 0 4px; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0 0 18px; font-size: .92rem; }
+
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.seg button { font: inherit; font-size: .9rem; border: 0; background: transparent; color: var(--fg); padding: 7px 14px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.seg button:hover:not([aria-pressed="true"]) { background: var(--accent-soft); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; gap: 18px; }
+.meta { display: flex; justify-content: space-between; color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.progress { height: 6px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; }
+.progress > i { display: block; height: 100%; background: var(--accent); width: 0; }
+.prompt-label { color: var(--muted); font-size: .8rem; letter-spacing: .04em; margin: 0; }
+.prompt { font-family: var(--font-vi); font-size: clamp(1.7rem, 6vw, 2.3rem); font-weight: 700; margin: 0; text-wrap: balance; }
+.choices { display: grid; gap: 10px; }
+.choice {
+  font: inherit; font-size: 1.05rem; text-align: left; color: var(--fg);
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; cursor: pointer; display: flex; gap: 12px; align-items: center;
+}
+.choice:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.choice .key { flex: none; width: 1.8rem; height: 1.8rem; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-size: .85rem; color: var(--muted); }
+.choice:disabled { cursor: default; }
+.choice.correct { border-color: var(--good); background: var(--good-soft); }
+.choice.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.choice.dim { opacity: .55; }
+.feedback { min-height: 1.6em; font-weight: 700; margin: 0; }
+.feedback.ok { color: var(--good); }
+.feedback.ng { color: var(--bad); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.primary { font: inherit; font-weight: 700; border: 0; background: var(--accent); color: var(--on-accent); border-radius: 999px; padding: 10px 22px; cursor: pointer; }
+.ghost { font: inherit; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 10px 18px; cursor: pointer; }
+.ghost:hover { background: var(--accent-soft); }
+
+.score { font-size: 2.6rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0; }
+.score small { font-size: 1rem; color: var(--muted); font-weight: 400; }
+.misses { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.misses li { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.misses .vi, .list .vi { font-family: var(--font-vi); font-weight: 600; }
+
+ol.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.list li { display: grid; grid-template-columns: 2rem minmax(0,1fr) minmax(0,1fr); gap: 12px; padding: 11px 16px; border-top: 1px solid var(--line); }
+.list li:first-child { border-top: 0; }
+.list .num { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.list .vi { font-size: 1.1rem; }
+
+.notes { margin-top: 24px; font-size: .9rem; color: var(--muted); }
+.notes h2 { font-size: .95rem; color: var(--fg); margin: 0 0 6px; }
+.notes ul { margin: 0; padding-left: 1.2em; }
+.notes b { font-family: var(--font-vi); color: var(--fg); }
+
+@media (max-width: 480px) {
+  .list li { grid-template-columns: 1.6rem minmax(0,1fr); }
+  .list li .ja { grid-column: 2; }
+  .misses li { grid-template-columns: minmax(0,1fr); gap: 2px; }
+  .card { padding: 18px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .progress > i { transition: width .25s; }
+  .choice { transition: background .12s, border-color .12s; }
+}
+</style>
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+html, body { margin: 0; }
+body { -webkit-text-size-adjust: 100%; }
+button { -webkit-tap-highlight-color: transparent; }
+</style>
+
+</head>
+<body>
+
+<div class="wrap">
+  <h1>ベトナム語ドリル</h1>
+  <p class="sub">ベトナム語の文を見て、正しい日本語を2つの中から選びましょう。</p>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="レベル">
+      <button id="lv2" data-level="2" aria-pressed="true">2語文</button>
+      <button id="lv3" data-level="3" aria-pressed="false">3語文</button>
+    </div>
+    <div class="seg" role="group" aria-label="表示">
+      <button id="mQuiz" data-mode="quiz" aria-pressed="true">クイズ</button>
+      <button id="mList" data-mode="list" aria-pressed="false">一覧</button>
+    </div>
+  </div>
+
+  <div id="view"></div>
+  <div class="notes" id="notes"></div>
+</div>
+
+<script>
+const DATA = {
+  2: [
+    ["Tôi ăn.", "私は食べる。"], ["Tôi đi.", "私は行く。"], ["Tôi đói.", "私はお腹が空いた。"],
+    ["Tôi mệt.", "私は疲れた。"], ["Tôi hiểu.", "私はわかる。"], ["Tôi biết.", "私は知っている。"],
+    ["Bạn đẹp.", "あなたはきれいだ。"], ["Mẹ nấu.", "母が料理する。"], ["Bố đọc.", "父が読む。"],
+    ["Em khóc.", "妹（弟）が泣く。"], ["Anh cười.", "兄が笑う。"], ["Trời mưa.", "雨が降る。"],
+    ["Trời nóng.", "暑い。"], ["Trời lạnh.", "寒い。"], ["Gió thổi.", "風が吹く。"],
+    ["Hoa nở.", "花が咲く。"], ["Chó sủa.", "犬が吠える。"], ["Mèo ngủ.", "猫が寝る。"],
+    ["Xe chạy.", "車が走る。"], ["Phở ngon.", "フォーがおいしい。"]
+  ],
+  3: [
+    ["Tôi ăn cơm.", "私はご飯を食べる。"], ["Tôi uống nước.", "私は水を飲む。"],
+    ["Tôi thích phở.", "私はフォーが好きだ。"], ["Tôi yêu bạn.", "私はあなたを愛している。"],
+    ["Mẹ nấu cơm.", "母がご飯を作る。"], ["Bố đọc báo.", "父が新聞を読む。"],
+    ["Chị mua rau.", "姉が野菜を買う。"], ["Mèo ăn cá.", "猫が魚を食べる。"],
+    ["Em đi học.", "妹（弟）が学校へ行く。"], ["Anh đi làm.", "兄が仕事へ行く。"],
+    ["Chó chạy nhanh.", "犬が速く走る。"], ["Tôi rất mệt.", "私はとても疲れた。"],
+    ["Trời rất nóng.", "とても暑い。"], ["Phở rất ngon.", "フォーはとてもおいしい。"],
+    ["Hôm nay mưa.", "今日は雨だ。"], ["Tôi không biết.", "私は知らない。"],
+    ["Tôi không hiểu.", "私はわからない。"], ["Tôi không đói.", "私はお腹が空いていない。"],
+    ["Bạn đi đâu?", "あなたはどこへ行くの？"], ["Đây là gì?", "これは何？"]
+  ]
+};
+const NOTES = {
+  2: `<h2>ポイント</h2><ul>
+    <li>活用がなく、「主語＋動詞」や「主語＋形容詞」を並べるだけで文になります（<b>Tôi mệt</b>＝私・疲れた）。</li>
+    <li><b>Trời</b> は「空・天」。天気の文の主語によく使います。</li>
+    <li>相手との関係で <b>Em / Anh / Chị</b> などの人称を使い分けます。</li></ul>`,
+  3: `<h2>ポイント</h2><ul>
+    <li>語順は「主語＋動詞＋目的語」（<b>Tôi ăn cơm</b>＝私・食べる・ご飯）。</li>
+    <li><b>rất</b>（とても）は形容詞の前に置きます。</li>
+    <li><b>không</b> を動詞・形容詞の前に置くと否定になります。</li>
+    <li>疑問詞 <b>đâu</b>（どこ）、<b>gì</b>（何）は文末に置きます。</li></ul>`
+};
+
+const S = { level: 2, mode: "quiz", queue: [], pos: 0, score: 0, misses: [], answered: false };
+try {
+  const s = JSON.parse(localStorage.getItem("vi-drill") || "{}");
+  if (s.level === 2 || s.level === 3) S.level = s.level;
+  if (s.mode === "quiz" || s.mode === "list") S.mode = s.mode;
+} catch (e) {}
+const save = () => { try { localStorage.setItem("vi-drill", JSON.stringify({ level: S.level, mode: S.mode })); } catch (e) {} };
+
+const view = document.getElementById("view");
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const esc = t => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function startQuiz(indices) {
+  S.queue = shuffle(indices || DATA[S.level].map((_, i) => i));
+  S.pos = 0; S.score = 0; S.misses = []; S.answered = false;
+  showQuestion();
+}
+
+function showQuestion() {
+  const items = DATA[S.level];
+  const idx = S.queue[S.pos];
+  const [vi, ja] = items[idx];
+  const others = items.map((_, i) => i).filter(i => i !== idx);
+  const wrongIdx = others[Math.floor(Math.random() * others.length)];
+  const opts = shuffle([{ text: ja, ok: true }, { text: items[wrongIdx][1], ok: false }]);
+  S.answered = false;
+  const total = S.queue.length;
+  view.innerHTML = `
+    <div class="card">
+      <div class="meta"><span>第 ${S.pos + 1} 問 / ${total}</span><span>正解 ${S.score}</span></div>
+      <div class="progress"><i style="width:${(S.pos / total) * 100}%"></i></div>
+      <p class="prompt-label">この文の意味は？</p>
+      <p class="prompt" lang="vi">${esc(vi)}</p>
+      <div class="choices">
+        ${opts.map((o, i) => `<button class="choice" id="opt${i}" data-ok="${o.ok}"><span class="key">${i + 1}</span><span>${esc(o.text)}</span></button>`).join("")}
+      </div>
+      <p class="feedback" id="fb" aria-live="polite"></p>
+      <div class="actions"><button class="primary" id="next" hidden>${S.pos + 1 < total ? "次の問題" : "結果を見る"}</button></div>
+    </div>`;
+  view.querySelectorAll(".choice").forEach(btn => btn.addEventListener("click", () => answer(btn)));
+  document.getElementById("next").addEventListener("click", next);
+}
+
+function answer(btn) {
+  if (S.answered) return;
+  S.answered = true;
+  const ok = btn.dataset.ok === "true";
+  const fb = document.getElementById("fb");
+  view.querySelectorAll(".choice").forEach(b => {
+    b.disabled = true;
+    if (b.dataset.ok === "true") b.classList.add("correct");
+    else if (b === btn) b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+  if (ok) { S.score++; fb.textContent = "正解！"; fb.className = "feedback ok"; }
+  else { S.misses.push(S.queue[S.pos]); fb.textContent = "不正解。緑色が正しい答えです。"; fb.className = "feedback ng"; }
+  view.querySelector(".meta span:last-child").textContent = `正解 ${S.score}`;
+  const n = document.getElementById("next");
+  n.hidden = false; n.focus();
+}
+
+function next() {
+  S.pos++;
+  if (S.pos < S.queue.length) showQuestion(); else showResult();
+}
+
+function showResult() {
+  const items = DATA[S.level];
+  const total = S.queue.length;
+  const msg = S.score === total ? "全問正解です！" : S.score >= total * 0.8 ? "よくできました。" : "間違えた文を見直してみましょう。";
+  view.innerHTML = `
+    <div class="card">
+      <p class="prompt-label">結果</p>
+      <p class="score">${S.score}<small> / ${total} 問正解</small></p>
+      <p style="margin:0">${msg}</p>
+      ${S.misses.length ? `<div><p class="prompt-label" style="margin-bottom:6px">間違えた文</p><ul class="misses">
+        ${S.misses.map(i => `<li><span class="vi" lang="vi">${esc(items[i][0])}</span><span>${esc(items[i][1])}</span></li>`).join("")}
+      </ul></div>` : ""}
+      <div class="actions">
+        ${S.misses.length ? `<button class="primary" id="retryMiss">間違えた問題だけもう一度</button>` : ""}
+        <button class="${S.misses.length ? "ghost" : "primary"}" id="retryAll">最初からもう一度</button>
+      </div>
+    </div>`;
+  const rm = document.getElementById("retryMiss");
+  if (rm) rm.addEventListener("click", () => startQuiz(S.misses.slice()));
+  document.getElementById("retryAll").addEventListener("click", () => startQuiz());
+}
+
+function showList() {
+  view.innerHTML = `<ol class="list">${DATA[S.level].map(([vi, ja], i) =>
+    `<li><span class="num">${i + 1}</span><span class="vi" lang="vi">${esc(vi)}</span><span class="ja">${esc(ja)}</span></li>`).join("")}</ol>`;
+}
+
+function render() {
+  document.querySelectorAll("[data-level]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.level === S.level)));
+  document.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)));
+  document.getElementById("notes").innerHTML = NOTES[S.level];
+  if (S.mode === "quiz") startQuiz(); else showList();
+}
+
+document.querySelectorAll("[data-level]").forEach(b => b.addEventListener("click", () => { S.level = +b.dataset.level; save(); render(); }));
+document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => { S.mode = b.dataset.mode; save(); render(); }));
+document.addEventListener("keydown", e => {
+  if (S.mode !== "quiz") return;
+  if ((e.key === "1" || e.key === "2") && !S.answered) {
+    const b = document.getElementById("opt" + (+e.key - 1)); if (b) b.click();
+  }
+});
+
+render();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>
