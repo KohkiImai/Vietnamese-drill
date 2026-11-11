@@ -73,6 +73,9 @@ select { font: inherit; font-size: .95rem; color: var(--fg); background: var(--s
 .prompt-label { color: var(--muted); font-size: .8rem; letter-spacing: .04em; margin: 0; }
 .prompt { font-family: var(--font-vi); font-size: clamp(1.5rem, 5.5vw, 2.1rem); font-weight: 700; margin: 0; text-wrap: balance; }
 .choices { display: grid; gap: 10px; }
+.prompt.ja-prompt { font-family: var(--font-ja); font-size: clamp(1.35rem, 5vw, 1.8rem); }
+.choice .vi-text { font-family: var(--font-vi); font-weight: 600; }
+.feedback .speak { display: inline-grid; vertical-align: middle; margin-left: 8px; }
 .choice {
   font: inherit; font-size: 1.05rem; text-align: left; color: var(--fg);
   background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px;
@@ -126,6 +129,9 @@ select { font: inherit; font-size: .95rem; color: var(--fg); background: var(--s
 .toggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .voice-warn { font-size: .85rem; color: var(--bad); background: var(--bad-soft); border-radius: 10px; padding: 10px 12px; margin: -6px 0 18px; }
 
+.alt-link { margin: -10px 0 18px; font-size: .9rem; }
+.alt-link a { color: var(--accent); font-weight: 600; }
+
 .notes { margin-top: 24px; font-size: .9rem; color: var(--muted); }
 .notes h2 { font-size: .95rem; color: var(--fg); margin: 0 0 6px; }
 .notes ul { margin: 0; padding-left: 1.2em; }
@@ -158,7 +164,8 @@ button { -webkit-tap-highlight-color: transparent; }
 
 <div class="wrap">
   <h1>ベトナム語ドリル</h1>
-  <p class="sub">同じ単語を組み合わせた100問。ベトナム語の文を見て（聞いて）、正しい日本語を2つから選びましょう。</p>
+  <p class="sub" id="subText">同じ単語を組み合わせた100問。出題の向きを選んで、正しい答えを2つから選びましょう。</p>
+  <p class="alt-link" id="altLink" hidden></p>
 
   <div class="bar">
     <label class="select-wrap" for="setSel">問題
@@ -168,6 +175,10 @@ button { -webkit-tap-highlight-color: transparent; }
       <button id="mQuiz" data-mode="quiz" aria-pressed="true">クイズ</button>
       <button id="mList" data-mode="list" aria-pressed="false">一覧</button>
       <button id="mVocab" data-mode="vocab" aria-pressed="false">単語</button>
+    </div>
+    <div class="seg" role="group" aria-label="出題の向き" id="dirSeg">
+      <button id="dVi" data-dir="vi" aria-pressed="true">ベトナム語 → 日本語</button>
+      <button id="dJa" data-dir="ja" aria-pressed="false">日本語 → ベトナム語</button>
     </div>
   </div>
 
@@ -184,148 +195,23 @@ button { -webkit-tap-highlight-color: transparent; }
   <div class="notes" id="notes"></div>
 </div>
 
+<script src="sentences.js"></script>
 <script>
-const SETS = [
-  { name: "1. 行く・帰る", note: `<li><b>đi đến</b> ＋場所＝「〜に行く」。<b>về nhà</b>＝「家に帰る」。</li>
-      <li><b>từ</b> ＋場所＋ <b>về</b>＝「〜から帰る」。</li>
-      <li><b>hôm nay</b>（今日）や <b>ngày mai</b>（明日）は文の頭に置きます。</li>`, items: [
-    ["Tôi đi đến nhà ga.", "私は駅に行く。"],
-    ["Tôi đi đến trường.", "私は学校に行く。"],
-    ["Anh ấy đi đến nhà ga.", "彼は駅に行く。"],
-    ["Anh ấy đi đến công ty.", "彼は会社に行く。"],
-    ["Chị ấy đi đến bệnh viện.", "彼女は病院に行く。"],
-    ["Em gái tôi đi đến trường.", "妹は学校に行く。"],
-    ["Mẹ đi đến chợ.", "母は市場に行く。"],
-    ["Bố đi đến công ty.", "父は会社に行く。"],
-    ["Bạn tôi đi đến siêu thị.", "友達はスーパーに行く。"],
-    ["Tôi về nhà.", "私は家に帰る。"],
-    ["Anh ấy về nhà.", "彼は家に帰る。"],
-    ["Em gái tôi từ trường về.", "妹は学校から帰る。"],
-    ["Bố từ công ty về.", "父は会社から帰る。"],
-    ["Mẹ từ chợ về.", "母は市場から帰る。"],
-    ["Chị ấy từ bệnh viện về.", "彼女は病院から帰る。"],
-    ["Tôi từ nhà ga về nhà.", "私は駅から家に帰る。"],
-    ["Hôm nay tôi đi đến công ty.", "今日、私は会社に行く。"],
-    ["Ngày mai anh ấy đi đến bệnh viện.", "明日、彼は病院に行く。"],
-    ["Hôm nay em gái tôi về nhà.", "今日、妹は家に帰る。"],
-    ["Ngày mai mẹ đi đến siêu thị.", "明日、母はスーパーに行く。"]
-  ]},
-  { name: "2. 食べる・飲む", note: `<li><b>ăn</b>＝食べる、<b>uống</b>＝飲む。目的語は動詞のあとに置きます。</li>
-      <li><b>ở</b> ＋場所＝「〜で」。文の最後に置きます（<b>ăn cơm ở nhà</b>＝家でご飯を食べる）。</li>`, items: [
-    ["Tôi ăn cơm.", "私はご飯を食べる。"],
-    ["Tôi ăn phở.", "私はフォーを食べる。"],
-    ["Tôi ăn bánh mì.", "私はバインミーを食べる。"],
-    ["Anh ấy ăn phở.", "彼はフォーを食べる。"],
-    ["Chị ấy ăn bánh mì.", "彼女はバインミーを食べる。"],
-    ["Em gái tôi ăn cơm.", "妹はご飯を食べる。"],
-    ["Bố ăn cơm ở nhà.", "父は家でご飯を食べる。"],
-    ["Mẹ ăn phở ở chợ.", "母は市場でフォーを食べる。"],
-    ["Tôi uống cà phê.", "私はコーヒーを飲む。"],
-    ["Tôi uống nước.", "私は水を飲む。"],
-    ["Tôi uống trà.", "私はお茶を飲む。"],
-    ["Anh ấy uống cà phê.", "彼はコーヒーを飲む。"],
-    ["Bố uống bia.", "父はビールを飲む。"],
-    ["Mẹ uống trà.", "母はお茶を飲む。"],
-    ["Bạn tôi uống bia.", "友達はビールを飲む。"],
-    ["Anh ấy uống cà phê ở công ty.", "彼は会社でコーヒーを飲む。"],
-    ["Em gái tôi ăn bánh mì ở trường.", "妹は学校でバインミーを食べる。"],
-    ["Tôi ăn cơm ở công ty.", "私は会社でご飯を食べる。"],
-    ["Hôm nay tôi ăn phở.", "今日、私はフォーを食べる。"],
-    ["Ngày mai bố uống bia.", "明日、父はビールを飲む。"]
-  ]},
-  { name: "3. 買う・好き・勉強する", note: `<li><b>mua</b>＝買う、<b>thích</b>＝好き、<b>học</b>＝勉強する、<b>đọc</b>＝読む。</li>
-      <li><b>tiếng</b> ＋国名で言語になります（<b>tiếng Việt</b>＝ベトナム語）。</li>`, items: [
-    ["Tôi mua bánh mì.", "私はバインミーを買う。"],
-    ["Mẹ mua rau.", "母は野菜を買う。"],
-    ["Mẹ mua rau ở chợ.", "母は市場で野菜を買う。"],
-    ["Bố mua báo.", "父は新聞を買う。"],
-    ["Chị ấy mua nước ở siêu thị.", "彼女はスーパーで水を買う。"],
-    ["Anh ấy mua sách.", "彼は本を買う。"],
-    ["Em gái tôi mua sách ở nhà ga.", "妹は駅で本を買う。"],
-    ["Tôi thích phở.", "私はフォーが好きだ。"],
-    ["Tôi thích cà phê.", "私はコーヒーが好きだ。"],
-    ["Anh ấy thích bia.", "彼はビールが好きだ。"],
-    ["Em gái tôi thích bánh mì.", "妹はバインミーが好きだ。"],
-    ["Mẹ thích trà.", "母はお茶が好きだ。"],
-    ["Tôi học tiếng Việt.", "私はベトナム語を勉強する。"],
-    ["Anh ấy học tiếng Nhật.", "彼は日本語を勉強する。"],
-    ["Em gái tôi học tiếng Anh.", "妹は英語を勉強する。"],
-    ["Tôi học tiếng Việt ở nhà.", "私は家でベトナム語を勉強する。"],
-    ["Chị ấy học tiếng Nhật ở trường.", "彼女は学校で日本語を勉強する。"],
-    ["Bố đọc báo.", "父は新聞を読む。"],
-    ["Tôi đọc sách ở nhà ga.", "私は駅で本を読む。"],
-    ["Bạn tôi thích tiếng Việt.", "友達はベトナム語が好きだ。"]
-  ]},
-  { name: "4. 否定・質問", note: `<li><b>không</b> を動詞の前に置くと否定になります（<b>không ăn</b>＝食べない）。</li>
-      <li><b>đâu</b>（どこ）、<b>gì</b>（何）は文末に置きます。</li>
-      <li><b>có</b> ＋動詞＋ <b>không?</b>＝「〜しますか？」。</li>`, items: [
-    ["Tôi không đi đến trường.", "私は学校に行かない。"],
-    ["Anh ấy không đi đến công ty.", "彼は会社に行かない。"],
-    ["Hôm nay tôi không về nhà.", "今日、私は家に帰らない。"],
-    ["Tôi không ăn cơm.", "私はご飯を食べない。"],
-    ["Em gái tôi không uống cà phê.", "妹はコーヒーを飲まない。"],
-    ["Bố không uống bia.", "父はビールを飲まない。"],
-    ["Tôi không thích bia.", "私はビールが好きではない。"],
-    ["Chị ấy không thích cà phê.", "彼女はコーヒーが好きではない。"],
-    ["Mẹ không mua rau.", "母は野菜を買わない。"],
-    ["Anh ấy không học tiếng Việt.", "彼はベトナム語を勉強しない。"],
-    ["Bạn đi đâu?", "あなたはどこへ行くの？"],
-    ["Anh ấy đi đâu?", "彼はどこへ行くの？"],
-    ["Mẹ mua gì?", "母は何を買うの？"],
-    ["Bạn ăn gì?", "あなたは何を食べるの？"],
-    ["Bạn uống gì?", "あなたは何を飲むの？"],
-    ["Bạn học gì?", "あなたは何を勉強するの？"],
-    ["Bạn có thích phở không?", "あなたはフォーが好きですか？"],
-    ["Anh ấy có đi đến nhà ga không?", "彼は駅に行きますか？"],
-    ["Bạn có uống cà phê không?", "あなたはコーヒーを飲みますか？"],
-    ["Ngày mai bạn đi đâu?", "明日、あなたはどこへ行くの？"]
-  ]},
-  { name: "5. 様子・もう〜した・〜して", note: `<li><b>rất</b> ＋形容詞＝「とても〜」。形容詞はそのまま述語になります。</li>
-      <li>文末の <b>rồi</b>＝「もう〜した」。</li>
-      <li><b>và</b>＝「そして」。2つの動作をつなぎます。<b>với</b>＝「〜と一緒に」。</li>`, items: [
-    ["Phở rất ngon.", "フォーはとてもおいしい。"],
-    ["Bánh mì rất ngon.", "バインミーはとてもおいしい。"],
-    ["Cà phê này rất ngon.", "このコーヒーはとてもおいしい。"],
-    ["Nhà ga rất xa.", "駅はとても遠い。"],
-    ["Trường rất gần.", "学校はとても近い。"],
-    ["Siêu thị không xa.", "スーパーは遠くない。"],
-    ["Chợ rất đông.", "市場はとても混んでいる。"],
-    ["Tiếng Việt rất khó.", "ベトナム語はとても難しい。"],
-    ["Tiếng Nhật không dễ.", "日本語は簡単ではない。"],
-    ["Hôm nay tôi rất mệt.", "今日、私はとても疲れた。"],
-    ["Em gái tôi rất đói.", "妹はとてもお腹が空いている。"],
-    ["Bố đi đến công ty rồi.", "父はもう会社に行った。"],
-    ["Mẹ từ chợ về rồi.", "母はもう市場から帰った。"],
-    ["Tôi ăn phở rồi.", "私はもうフォーを食べた。"],
-    ["Anh ấy về nhà rồi.", "彼はもう家に帰った。"],
-    ["Tôi đi đến nhà ga và mua bánh mì.", "私は駅に行って、バインミーを買う。"],
-    ["Mẹ đi đến chợ và mua rau.", "母は市場に行って、野菜を買う。"],
-    ["Tôi về nhà và học tiếng Việt.", "私は家に帰って、ベトナム語を勉強する。"],
-    ["Bố về nhà và uống bia.", "父は家に帰って、ビールを飲む。"],
-    ["Ngày mai tôi đi đến trường với em gái.", "明日、私は妹と学校に行く。"]
-  ]}
-];
-
-const VOCAB = [
-  ["人", [["Tôi","私"],["Bạn","あなた"],["Anh ấy","彼"],["Chị ấy","彼女"],["Em gái tôi","妹"],["Bố","父"],["Mẹ","母"],["Bạn tôi","私の友達"]]],
-  ["場所", [["nhà ga","駅"],["trường","学校"],["công ty","会社"],["bệnh viện","病院"],["siêu thị","スーパー"],["chợ","市場"],["nhà","家"]]],
-  ["動作", [["đi đến","〜に行く"],["về","帰る"],["từ 〜 về","〜から帰る"],["ăn","食べる"],["uống","飲む"],["mua","買う"],["thích","好き"],["học","勉強する"],["đọc","読む"]]],
-  ["もの", [["cơm","ご飯"],["phở","フォー"],["bánh mì","バインミー（パン）"],["cà phê","コーヒー"],["nước","水"],["trà","お茶"],["bia","ビール"],["rau","野菜"],["sách","本"],["báo","新聞"],["tiếng Việt","ベトナム語"],["tiếng Nhật","日本語"],["tiếng Anh","英語"]]],
-  ["様子", [["ngon","おいしい"],["xa","遠い"],["gần","近い"],["đông","混んでいる"],["khó","難しい"],["dễ","簡単"],["mệt","疲れた"],["đói","お腹が空いた"]]],
-  ["その他", [["ở","〜で"],["hôm nay","今日"],["ngày mai","明日"],["không","〜ない"],["có 〜 không?","〜しますか？"],["đâu","どこ"],["gì","何"],["rất","とても"],["rồi","もう〜した"],["và","そして"],["với","〜と一緒に"],["này","この"]]]
-];
-
 // Flat list of all 100 items: [vi, ja, setIndex]
 const ALL = SETS.flatMap((s, si) => s.items.map(([vi, ja]) => [vi, ja, si]));
 const RANDOM_N = 20;
+// 公開用ファイルでは出題の向きを固定する（"vi"＝ベトナム語→日本語、"ja"＝日本語→ベトナム語、null＝切り替え可）
+const FIXED_DIR = null;
 
-const S = { set: 0, mode: "quiz", queue: [], pos: 0, score: 0, misses: [], answered: false };
+const S = { set: 0, mode: "quiz", dir: "vi", queue: [], pos: 0, score: 0, misses: [], answered: false };
 try {
   const s = JSON.parse(localStorage.getItem("vi-drill-100") || "{}");
   if (Number.isInteger(s.set) && s.set >= 0 && s.set <= SETS.length + 1) S.set = s.set;
   if (["quiz","list","vocab"].includes(s.mode)) S.mode = s.mode;
+  if (s.dir === "vi" || s.dir === "ja") S.dir = s.dir;
 } catch (e) {}
-const save = () => { try { localStorage.setItem("vi-drill-100", JSON.stringify({ set: S.set, mode: S.mode })); } catch (e) {} };
+if (FIXED_DIR) S.dir = FIXED_DIR;
+const save = () => { try { localStorage.setItem("vi-drill-100", JSON.stringify({ set: S.set, mode: S.mode, dir: S.dir })); } catch (e) {} };
 
 const view = document.getElementById("view");
 const sel = document.getElementById("setSel");
@@ -396,24 +282,27 @@ function startQuiz(indices) {
 function showQuestion() {
   const idx = S.queue[S.pos];
   const [vi, ja] = ALL[idx];
-  const opts = shuffle([{ text: ja, ok: true }, { text: ALL[pickDistractor(idx)][1], ok: false }]);
+  const rev = S.dir === "ja"; // 日本語を見てベトナム語を選ぶ
+  const d = pickDistractor(idx);
+  const opts = shuffle([{ text: rev ? vi : ja, ok: true }, { text: rev ? ALL[d][0] : ALL[d][1], ok: false }]);
   S.answered = false;
   const total = S.queue.length;
   view.innerHTML = `
     <div class="card">
       <div class="meta"><span>第 ${S.pos + 1} 問 / ${total}</span><span id="sc">正解 ${S.score}</span></div>
       <div class="progress"><i style="width:${(S.pos / total) * 100}%"></i></div>
-      <p class="prompt-label">この文の意味は？</p>
-      <div class="prompt-row"><p class="prompt" lang="vi">${esc(vi)}</p>${sayBtn(vi)}</div>
+      <p class="prompt-label">${rev ? "ベトナム語で言うと？" : "この文の意味は？"}</p>
+      ${rev ? `<p class="prompt ja-prompt" lang="ja">${esc(ja)}</p>`
+            : `<div class="prompt-row"><p class="prompt" lang="vi">${esc(vi)}</p>${sayBtn(vi)}</div>`}
       <div class="choices">
-        ${opts.map((o, i) => `<button class="choice" id="opt${i}" data-ok="${o.ok}"><span class="key">${i + 1}</span><span>${esc(o.text)}</span></button>`).join("")}
+        ${opts.map((o, i) => `<button class="choice" id="opt${i}" data-ok="${o.ok}"><span class="key">${i + 1}</span><span${rev ? ' class="vi-text" lang="vi"' : ""}>${esc(o.text)}</span></button>`).join("")}
       </div>
       <p class="feedback" id="fb" aria-live="polite"></p>
       <div class="actions"><button class="primary" id="next" hidden>${S.pos + 1 < total ? "次の問題" : "結果を見る"}</button></div>
     </div>`;
   view.querySelectorAll(".choice").forEach(btn => btn.addEventListener("click", () => answer(btn)));
   document.getElementById("next").addEventListener("click", next);
-  if (A.auto && userActed) speak(vi);
+  if (!rev && A.auto && userActed) speak(vi);
 }
 
 function answer(btn) {
@@ -429,6 +318,11 @@ function answer(btn) {
   });
   if (ok) { S.score++; fb.textContent = "正解！"; fb.className = "feedback ok"; }
   else { S.misses.push(S.queue[S.pos]); fb.textContent = "不正解。緑色が正しい答えです。"; fb.className = "feedback ng"; }
+  if (S.dir === "ja") {
+    const vi = ALL[S.queue[S.pos]][0];
+    fb.insertAdjacentHTML("beforeend", sayBtn(vi, "sm"));
+    if (A.auto) speak(vi);
+  }
   document.getElementById("sc").textContent = `正解 ${S.score}`;
   const n = document.getElementById("next");
   n.hidden = false; n.focus();
@@ -485,6 +379,8 @@ function renderNotes() {
 function render() {
   sel.value = String(S.set);
   document.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)));
+  document.querySelectorAll("[data-dir]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.dir === S.dir)));
+  document.getElementById("dirSeg").hidden = S.mode !== "quiz" || !!FIXED_DIR;
   sel.disabled = S.mode === "vocab";
   renderNotes();
   if (S.mode === "quiz") startQuiz(); else if (S.mode === "list") showList(); else showVocab();
@@ -495,6 +391,7 @@ sel.innerHTML = SETS.map((s, i) => `<option value="${i}">${esc(s.name)}（20問�
   + `<option value="${SETS.length + 1}">全100問</option>`;
 sel.addEventListener("change", () => { S.set = +sel.value; save(); render(); });
 document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => { S.mode = b.dataset.mode; save(); render(); }));
+document.querySelectorAll("[data-dir]").forEach(b => b.addEventListener("click", () => { S.dir = b.dataset.dir; save(); render(); }));
 document.addEventListener("keydown", e => {
   if (S.mode !== "quiz" || e.target.tagName === "SELECT") return;
   if ((e.key === "1" || e.key === "2") && !S.answered) {
@@ -503,6 +400,18 @@ document.addEventListener("keydown", e => {
     const n = document.getElementById("next"); if (n && document.activeElement !== n) n.click();
   }
 });
+
+if (FIXED_DIR) {
+  const sub = document.getElementById("subText"), alt = document.getElementById("altLink");
+  if (FIXED_DIR === "vi") {
+    sub.textContent = "同じ単語を組み合わせた100問。ベトナム語の文を見て（聞いて）、正しい日本語を2つから選びましょう。";
+    alt.innerHTML = '逆向きの練習：<a href="ja.html">日本語 → ベトナム語 版</a>';
+  } else {
+    sub.textContent = "同じ単語を組み合わせた100問。日本語の文を見て、正しいベトナム語を2つから選びましょう。";
+    alt.innerHTML = '逆向きの練習：<a href="./">ベトナム語 → 日本語 版</a>';
+  }
+  alt.hidden = false;
+}
 
 // 読み上げの操作
 document.addEventListener("pointerdown", () => { userActed = true; }, { capture: true });
