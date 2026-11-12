@@ -64,6 +64,11 @@ h1 { font-size: 1.6rem; margin: 0 0 4px; text-wrap: balance; }
 .seg button:hover:not([aria-pressed="true"]) { background: var(--accent-soft); }
 button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .select-wrap { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); }
+[hidden] { display: none !important; }
+.select-wrap { flex: 1 1 14rem; min-width: 0; white-space: nowrap; }
+#levelSel { flex: none; }
+.select-wrap:has(#levelSel) { flex: 0 0 auto; }
+#setSel { flex: 1; min-width: 0; width: 100%; }
 select { font: inherit; font-size: .95rem; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; max-width: 100%; }
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; gap: 18px; }
@@ -129,8 +134,6 @@ select { font: inherit; font-size: .95rem; color: var(--fg); background: var(--s
 .toggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .voice-warn { font-size: .85rem; color: var(--bad); background: var(--bad-soft); border-radius: 10px; padding: 10px 12px; margin: -6px 0 18px; }
 
-.alt-link { margin: -10px 0 18px; font-size: .9rem; }
-.alt-link a { color: var(--accent); font-weight: 600; }
 
 .notes { margin-top: 24px; font-size: .9rem; color: var(--muted); }
 .notes h2 { font-size: .95rem; color: var(--fg); margin: 0 0 6px; }
@@ -164,11 +167,13 @@ button { -webkit-tap-highlight-color: transparent; }
 
 <div class="wrap">
   <h1>ベトナム語ドリル</h1>
-  <p class="sub" id="subText">同じ単語を組み合わせた100問。出題の向きを選んで、正しい答えを2つから選びましょう。</p>
-  <p class="alt-link" id="altLink" hidden></p>
+  <p class="sub" id="subText">同じ単語をくり返し使う例文で、正しい答えを2つから選びましょう。レベルとセットを選んで始めます。</p>
 
   <div class="bar">
-    <label class="select-wrap" for="setSel">問題
+    <label class="select-wrap" for="levelSel">レベル
+      <select id="levelSel"></select>
+    </label>
+    <label class="select-wrap" for="setSel">セット
       <select id="setSel"></select>
     </label>
     <div class="seg" role="group" aria-label="表示">
@@ -195,45 +200,57 @@ button { -webkit-tap-highlight-color: transparent; }
   <div class="notes" id="notes"></div>
 </div>
 
-<script src="sentences.js"></script>
+<script src="level0.js"></script>
+<script src="level1.js"></script>
 <script>
-// Flat list of all 100 items: [vi, ja, setIndex]
-const ALL = SETS.flatMap((s, si) => s.items.map(([vi, ja]) => [vi, ja, si]));
+// 問題データは levelN.js（window.LEVELS）から読み込む
+const LEVELS = window.LEVELS || [];
 const RANDOM_N = 20;
-// 公開用ファイルでは出題の向きを固定する（"vi"＝ベトナム語→日本語、"ja"＝日本語→ベトナム語、null＝切り替え可）
-const FIXED_DIR = null;
+let SETS = [], ALL = [];
+function useLevel(li) {
+  SETS = LEVELS[li].sets;
+  ALL = SETS.flatMap((s, si) => s.items.map(([vi, ja]) => [vi, ja, si]));
+}
 
-const S = { set: 0, mode: "quiz", dir: "vi", queue: [], pos: 0, score: 0, misses: [], answered: false };
+const S = { level: 0, set: 0, mode: "quiz", dir: "vi", queue: [], pos: 0, score: 0, misses: [], answered: false };
 try {
-  const s = JSON.parse(localStorage.getItem("vi-drill-100") || "{}");
+  const s = JSON.parse(localStorage.getItem("vi-drill-state") || "{}");
+  if (Number.isInteger(s.level) && s.level >= 0 && s.level < LEVELS.length) S.level = s.level;
+  useLevel(S.level);
   if (Number.isInteger(s.set) && s.set >= 0 && s.set <= SETS.length + 1) S.set = s.set;
   if (["quiz","list","vocab"].includes(s.mode)) S.mode = s.mode;
   if (s.dir === "vi" || s.dir === "ja") S.dir = s.dir;
 } catch (e) {}
-if (FIXED_DIR) S.dir = FIXED_DIR;
-const save = () => { try { localStorage.setItem("vi-drill-100", JSON.stringify({ set: S.set, mode: S.mode, dir: S.dir })); } catch (e) {} };
+if (!SETS.length) useLevel(S.level);
+const save = () => { try { localStorage.setItem("vi-drill-state", JSON.stringify({ level: S.level, set: S.set, mode: S.mode, dir: S.dir })); } catch (e) {} };
 
 const view = document.getElementById("view");
 const sel = document.getElementById("setSel");
+const levelSel = document.getElementById("levelSel");
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const esc = t => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const words = t => t.toLowerCase().replace(/[.,?!]/g, "").split(/\s+/);
+const normJa = t => t.replace(/[。、！？!?.,\s（）()]/g, "");
 
 // Which item indices (into ALL) belong to the current selection
 function poolIndices() {
   if (S.set < SETS.length) return ALL.map((x, i) => i).filter(i => ALL[i][2] === S.set);
-  return ALL.map((x, i) => i); // ランダム / 全100問
+  return ALL.map((x, i) => i); // ランダム / 全問
 }
 
-// Pick a distractor that shares many words with the correct sentence, so you must read every word
+// Pick a distractor (from the same level) that shares many words with the correct sentence, so you must read every word.
+// Sentences whose Japanese is the same or contains the other's are skipped, so only one choice is ever correct.
 function pickDistractor(idx) {
   const target = words(ALL[idx][0]);
   const scored = ALL.map((x, i) => {
-    if (i === idx || x[1] === ALL[idx][1]) return null;
+    if (i === idx) return null;
+    const a = normJa(x[1]), b = normJa(ALL[idx][1]);
+    if (a === b || a.includes(b) || b.includes(a)) return null;
     const w = words(x[0]);
     const shared = w.filter(t => target.includes(t)).length;
     const lenDiff = Math.abs(w.length - target.length);
-    return { i, score: shared * 2 - lenDiff };
+    const sameSet = x[2] === ALL[idx][2] ? 2 : 0; // 同じセットの文を優先（文型が近い）
+    return { i, score: shared * 2 - lenDiff + sameSet };
   }).filter(Boolean).sort((a, b) => b.score - a.score);
   const top = scored.slice(0, 4);
   return top[Math.floor(Math.random() * top.length)].i;
@@ -364,8 +381,11 @@ function showList() {
 }
 
 function showVocab() {
-  view.innerHTML = VOCAB.map(([title, list]) =>
-    `<h2 class="group-title">${title}</h2><ul class="list vocab">${list.map(([vi, ja]) =>
+  const lv = LEVELS[S.level];
+  const groups = lv.vocab ? lv.vocab
+    : (S.set < SETS.length ? [S.set] : SETS.map((_, i) => i)).map(si => [SETS[si].name, SETS[si].words || []]);
+  view.innerHTML = groups.map(([title, list]) =>
+    `<h2 class="group-title">${esc(title)}</h2><ul class="list vocab">${list.map(([vi, ja]) =>
       `<li><span class="vi" lang="vi">${esc(vi)}</span><span class="ja">${esc(ja)}</span>${sayBtn(vi, "sm")}</li>`).join("")}</ul>`).join("");
 }
 
@@ -377,18 +397,25 @@ function renderNotes() {
 }
 
 function render() {
+  levelSel.value = String(S.level);
   sel.value = String(S.set);
   document.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)));
   document.querySelectorAll("[data-dir]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.dir === S.dir)));
-  document.getElementById("dirSeg").hidden = S.mode !== "quiz" || !!FIXED_DIR;
-  sel.disabled = S.mode === "vocab";
+  document.getElementById("dirSeg").hidden = S.mode !== "quiz";
+  sel.disabled = S.mode === "vocab" && !!LEVELS[S.level].vocab;
   renderNotes();
   if (S.mode === "quiz") startQuiz(); else if (S.mode === "list") showList(); else showVocab();
 }
 
-sel.innerHTML = SETS.map((s, i) => `<option value="${i}">${esc(s.name)}（20問）</option>`).join("")
-  + `<option value="${SETS.length}">全体からランダム（${RANDOM_N}問）</option>`
-  + `<option value="${SETS.length + 1}">全100問</option>`;
+function fillSets() {
+  sel.innerHTML = SETS.map((s, i) => `<option value="${i}">${esc(s.name)}（${s.items.length}問）</option>`).join("")
+    + `<option value="${SETS.length}">このレベルからランダム（${RANDOM_N}問）</option>`
+    + `<option value="${SETS.length + 1}">このレベルの全${ALL.length}問</option>`;
+}
+levelSel.innerHTML = LEVELS.map((l, i) =>
+  `<option value="${i}">${esc(l.name)}（${l.sets.reduce((n, s) => n + s.items.length, 0)}問）</option>`).join("");
+fillSets();
+levelSel.addEventListener("change", () => { S.level = +levelSel.value; S.set = 0; useLevel(S.level); fillSets(); save(); render(); });
 sel.addEventListener("change", () => { S.set = +sel.value; save(); render(); });
 document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => { S.mode = b.dataset.mode; save(); render(); }));
 document.querySelectorAll("[data-dir]").forEach(b => b.addEventListener("click", () => { S.dir = b.dataset.dir; save(); render(); }));
@@ -400,18 +427,6 @@ document.addEventListener("keydown", e => {
     const n = document.getElementById("next"); if (n && document.activeElement !== n) n.click();
   }
 });
-
-if (FIXED_DIR) {
-  const sub = document.getElementById("subText"), alt = document.getElementById("altLink");
-  if (FIXED_DIR === "vi") {
-    sub.textContent = "同じ単語を組み合わせた100問。ベトナム語の文を見て（聞いて）、正しい日本語を2つから選びましょう。";
-    alt.innerHTML = '逆向きの練習：<a href="ja.html">日本語 → ベトナム語 版</a>';
-  } else {
-    sub.textContent = "同じ単語を組み合わせた100問。日本語の文を見て、正しいベトナム語を2つから選びましょう。";
-    alt.innerHTML = '逆向きの練習：<a href="./">ベトナム語 → 日本語 版</a>';
-  }
-  alt.hidden = false;
-}
 
 // 読み上げの操作
 document.addEventListener("pointerdown", () => { userActed = true; }, { capture: true });
